@@ -32,6 +32,7 @@ import {
   type AssetHierarchy,
   type KpiThresholds,
 } from "../../types/kpi.types";
+import { MOCK_CONTEXTS, ContextType, ContextStatus } from "../../../../estructura/contextos/contextos.shared";
 import type { KpiFormDialogProps } from "./KpiFormDialog.types";
 
 type TabId = "basico" | "formula" | "objetivos";
@@ -155,35 +156,11 @@ const TEMPORAL_PERIODS = [
   KpiPeriod.MES,
   KpiPeriod.PERSONALIZADO,
 ];
-const OPERATIVE_PERIODS = [
-  KpiPeriod.TURNO,
-  KpiPeriod.ORDEN_FABRICACION,
-  KpiPeriod.LOTE,
-  KpiPeriod.CONTEXTO,
-];
+// Solo "Contexto operativo" — contempla turnos, OFs, lotes y cualquier otro contexto
+const OPERATIVE_PERIODS = [KpiPeriod.CONTEXTO];
 
-// Periods that allow selecting a specific operating context
-const CONTEXT_PERIODS = new Set<KpiPeriod>([
-  KpiPeriod.TURNO,
-  KpiPeriod.ORDEN_FABRICACION,
-  KpiPeriod.LOTE,
-  KpiPeriod.CONTEXTO,
-]);
-
-// ── Mock operating contexts (mirrors configuracion/estructura/contextos) ────────
-type ContextOption = { id: string; label: string; type: string; status: "Activo" | "Planificado" | "Cerrado" };
-const OPERATING_CONTEXTS: ContextOption[] = [
-  { id: "ctx-001", label: "Turno M – Semana 07/2025",          type: "Turno",              status: "Activo"      },
-  { id: "ctx-002", label: "Turno T – Semana 07/2025",          type: "Turno",              status: "Activo"      },
-  { id: "ctx-003", label: "Turno N – Semana 07/2025",          type: "Turno",              status: "Planificado" },
-  { id: "ctx-004", label: "OF-2025-0042 – Producto A Lote 3",  type: "Orden de Fabricación", status: "Activo"    },
-  { id: "ctx-005", label: "OF-2025-0041 – Producto B Lote 1",  type: "Orden de Fabricación", status: "Cerrado"   },
-  { id: "ctx-006", label: "Lote 2025-03-A – Línea 1",          type: "Lote",               status: "Activo"      },
-  { id: "ctx-007", label: "Lote 2025-02-B – Línea 2",          type: "Lote",               status: "Cerrado"     },
-  { id: "ctx-008", label: "Mantenimiento preventivo Q1",        type: "Mantenimiento",      status: "Planificado" },
-  { id: "ctx-009", label: "Periodo de pruebas línea 3",        type: "Proyecto",           status: "Activo"      },
-  { id: "ctx-010", label: "Parada técnica anual 2025",         type: "Parada técnica",     status: "Planificado" },
-];
+// CONTEXTO activa el selector de contexto operativo
+const CONTEXT_PERIODS = new Set<KpiPeriod>([KpiPeriod.CONTEXTO]);
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export function KpiFormDialog({
@@ -574,39 +551,70 @@ export function KpiFormDialog({
                   </div>
 
                   {/* Context picker — shown only for operative periods */}
-                  {CONTEXT_PERIODS.has(period) && (
-                    <div className="space-y-2">
-                      <Label>Contexto operativo</Label>
-                      <Select
-                        value={contextRef || "__none__"}
-                        onValueChange={(v) => setContextRef(v === "__none__" ? "" : v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona un contexto…" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">— Cualquier contexto activo —</SelectItem>
-                          {OPERATING_CONTEXTS.map((ctx) => (
-                            <SelectItem key={ctx.id} value={ctx.id}>
-                              <span className="flex items-center gap-2">
-                                <span
-                                  className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${
-                                    ctx.status === "Activo"      ? "bg-emerald-500" :
-                                    ctx.status === "Planificado" ? "bg-amber-500"   : "bg-zinc-400"
-                                  }`}
-                                />
-                                {ctx.label}
+                  {CONTEXT_PERIODS.has(period) && (() => {
+                    const filtered = MOCK_CONTEXTS.filter((c) => Object.values(ContextType).includes(c.type));
+                    // Group by type for display
+                    const grouped = filtered.reduce<Record<string, typeof filtered>>((acc, c) => {
+                      (acc[c.type] ??= []).push(c);
+                      return acc;
+                    }, {});
+                    const selectedCtx = MOCK_CONTEXTS.find((c) => String(c.contextUUID) === contextRef);
+                    return (
+                      <div className="space-y-2">
+                        <Label>Contexto operativo</Label>
+                        <Select
+                          value={contextRef || "__none__"}
+                          onValueChange={(v) => setContextRef(v === "__none__" ? "" : v)}
+                        >
+                          <SelectTrigger>
+                            {selectedCtx ? (
+                              <span className="flex items-center gap-2 truncate">
+                                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                                  selectedCtx.status === ContextStatus.ACTIVE   ? "bg-emerald-500" :
+                                  selectedCtx.status === ContextStatus.PLANNED  ? "bg-amber-500"   : "bg-zinc-400"
+                                }`} />
+                                <span className="truncate">{selectedCtx.name}</span>
                               </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-slate-500">
-                        Opcional. El KPI se calculará sobre el contexto seleccionado.
-                        ● Activo · ● Planificado · ● Cerrado
-                      </p>
-                    </div>
-                  )}
+                            ) : (
+                              <SelectValue placeholder="— Cualquier contexto activo —" />
+                            )}
+                          </SelectTrigger>
+                          <SelectContent className="max-h-72">
+                            <SelectItem value="__none__">— Cualquier contexto activo —</SelectItem>
+                            {Object.entries(grouped).map(([type, ctxs]) => (
+                              <div key={type}>
+                                <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                                  {type}
+                                </div>
+                                {ctxs.map((ctx) => (
+                                  <SelectItem key={ctx.contextUUID} value={ctx.contextUUID}>
+                                    <span className="flex items-center gap-2">
+                                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                                        ctx.status === ContextStatus.ACTIVE   ? "bg-emerald-500" :
+                                        ctx.status === ContextStatus.PLANNED  ? "bg-amber-500"   : "bg-zinc-400"
+                                      }`} />
+                                      <span className="flex flex-col">
+                                        <span>{ctx.name}</span>
+                                        <span className="text-[10px] text-slate-400 font-mono">{ctx.contextUUID} · {ctx.hierarchy.split(" > ").pop()}</span>
+                                      </span>
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </div>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-500">
+                          Opcional. El KPI se calculará dentro del contexto seleccionado.
+                          <span className="inline-flex items-center gap-1 ml-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" /> Activo
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block ml-1" /> Planificado
+                            <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 inline-block ml-1" /> Cerrado
+                          </span>
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

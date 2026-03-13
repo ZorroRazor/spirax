@@ -22,6 +22,7 @@ import {
   VizType, TimePeriodPreset, ResolutionPreset, RealTimeInterval, NullHandling, AggregationFn,
 } from "./types/analytics.types";
 import { generateSeriesData, SAVED_ANALYTICS } from "./utils/mockData";
+import { MOCK_CONTEXTS, ContextStatus } from "../configuracion/estructura/contextos/contextos.shared";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const PERIOD_PRESETS: { label: string; value: TimePeriodPreset }[] = [
@@ -33,6 +34,7 @@ const PERIOD_PRESETS: { label: string; value: TimePeriodPreset }[] = [
   { label: "7 d",    value: TimePeriodPreset.D7  },
   { label: "30 d",   value: TimePeriodPreset.D30 },
   { label: "Custom", value: TimePeriodPreset.CUSTOM },
+  { label: "Contexto op.", value: TimePeriodPreset.CONTEXTO },
 ];
 
 const RT_INTERVALS: { label: string; value: RealTimeInterval }[] = [
@@ -86,6 +88,7 @@ export default function AnalyticsPage() {
   const [period, setPeriod] = useState<PeriodConfig>({ preset: TimePeriodPreset.H1 });
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [contextRef, setContextRef] = useState<string>("");
   const [resolution, setResolution] = useState<ResolutionPreset>(ResolutionPreset.AUTO);
   const [nullHandling, setNullHandling] = useState<NullHandling>(NullHandling.INTERPOLATE);
   const [showLegend, setShowLegend] = useState(true);
@@ -124,8 +127,18 @@ export default function AnalyticsPage() {
     if (period.preset === TimePeriodPreset.CUSTOM && customFrom && customTo) {
       return { preset: TimePeriodPreset.CUSTOM, from: customFrom, to: customTo };
     }
+    if (period.preset === TimePeriodPreset.CONTEXTO && contextRef) {
+      const ctx = MOCK_CONTEXTS.find((c) => c.contextUUID === contextRef);
+      if (ctx) {
+        return {
+          preset: TimePeriodPreset.CUSTOM,
+          from: ctx.startAt,
+          to: ctx.endAt ?? new Date().toISOString(),
+        };
+      }
+    }
     return period;
-  }, [rtEnabled, rtWindow, period, customFrom, customTo]);
+  }, [rtEnabled, rtWindow, period, customFrom, customTo, contextRef]);
 
   // Generate chart data
   const chartData = useMemo(() => {
@@ -143,6 +156,7 @@ export default function AnalyticsPage() {
     setPeriod(view.period);
     setCustomFrom(toDateInputValue(view.period.from));
     setCustomTo(toDateInputValue(view.period.to));
+    setContextRef(view.period.contextId ?? "");
     setResolution(view.resolution);
     setNullHandling(view.nullHandling);
     setShowLegend(view.vizOptions.showLegend);
@@ -167,6 +181,8 @@ export default function AnalyticsPage() {
       series,
       period: period.preset === TimePeriodPreset.CUSTOM
         ? { preset: TimePeriodPreset.CUSTOM, from: customFrom, to: customTo }
+        : period.preset === TimePeriodPreset.CONTEXTO
+        ? { preset: TimePeriodPreset.CONTEXTO, contextId: contextRef }
         : period,
       resolution,
       nullHandling,
@@ -175,7 +191,7 @@ export default function AnalyticsPage() {
       createdAt: savedViews.find((v) => v.id === currentId)?.createdAt ?? now,
       updatedAt: now,
     };
-  }, [currentId, saveDialogName, saveDialogDesc, name, description, vizType, series, period, customFrom, customTo, resolution, nullHandling, rtEnabled, rtInterval, rtWindow, showLegend, showGrid, yAutoScale, barAgg, pageSize, savedViews]);
+  }, [currentId, saveDialogName, saveDialogDesc, name, description, vizType, series, period, customFrom, customTo, contextRef, resolution, nullHandling, rtEnabled, rtInterval, rtWindow, showLegend, showGrid, yAutoScale, barAgg, pageSize, savedViews]);
 
   const handleSave = () => {
     const view = buildView();
@@ -221,7 +237,7 @@ export default function AnalyticsPage() {
     setCurrentId(undefined);
     setName(d.name); setDescription("");
     setVizType(d.vizType); setSeries([]); setPeriod(d.period);
-    setCustomFrom(""); setCustomTo("");
+    setCustomFrom(""); setCustomTo(""); setContextRef("");
     setResolution(d.resolution); setNullHandling(d.nullHandling);
     setShowLegend(true); setShowGrid(true); setYAutoScale(true);
     setBarAgg(AggregationFn.AVG);
@@ -390,6 +406,53 @@ export default function AnalyticsPage() {
                 onChange={(e) => setCustomTo(e.target.value)}
                 className="rounded-md border border-slate-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-slate-400"
               />
+            </div>
+          )}
+
+          {/* Operating context selector */}
+          {period.preset === TimePeriodPreset.CONTEXTO && (
+            <div className="flex items-center gap-2">
+              <Select value={contextRef} onValueChange={setContextRef}>
+                <SelectTrigger className="h-7 w-64 text-xs">
+                  <SelectValue placeholder="Seleccionar contexto operativo…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...MOCK_CONTEXTS]
+                    .sort((a, b) => {
+                      const order: Record<string, number> = {
+                        [ContextStatus.ACTIVE]: 0,
+                        [ContextStatus.PLANNED]: 1,
+                        [ContextStatus.CLOSED]: 2,
+                      };
+                      return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+                    })
+                    .map((ctx) => {
+                      const dot =
+                        ctx.status === ContextStatus.ACTIVE ? "bg-emerald-500" :
+                        ctx.status === ContextStatus.PLANNED ? "bg-amber-400" : "bg-zinc-300";
+                      return (
+                        <SelectItem key={ctx.contextUUID} value={ctx.contextUUID}>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
+                            <span className="font-medium">{ctx.name}</span>
+                            <span className="text-slate-400 text-[10px]">· {ctx.type}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                </SelectContent>
+              </Select>
+              {contextRef && (() => {
+                const ctx = MOCK_CONTEXTS.find((c) => c.contextUUID === contextRef);
+                if (!ctx) return null;
+                const fmt = (iso: string) =>
+                  new Date(iso).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+                return (
+                  <span className="text-[11px] text-slate-400 whitespace-nowrap">
+                    {fmt(ctx.startAt)} → {ctx.endAt ? fmt(ctx.endAt) : <span className="text-emerald-600 font-medium">activo</span>}
+                  </span>
+                );
+              })()}
             </div>
           )}
 

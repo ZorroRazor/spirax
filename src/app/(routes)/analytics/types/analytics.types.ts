@@ -19,6 +19,7 @@ export enum TimePeriodPreset {
   H1 = "1h", H6 = "6h", H24 = "24h",
   D7 = "7d", D30 = "30d",
   CUSTOM = "custom",
+  CONTEXTO = "contexto",
 }
 
 export enum RealTimeInterval { S1 = 1000, S2 = 2000, S5 = 5000, S10 = 10000 }
@@ -49,8 +50,9 @@ export type SeriesConfig = {
 
 export type PeriodConfig = {
   preset: TimePeriodPreset;
-  from?: string;              // ISO, only when preset=CUSTOM
+  from?: string;              // ISO, only when preset=CUSTOM or CONTEXTO
   to?: string;
+  contextId?: string;         // contextUUID, only when preset=CONTEXTO
 };
 
 export type RealTimeConfig = {

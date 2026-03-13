@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Building2, Network, Boxes, Cpu } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Building2, Network, Boxes, Cpu, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -16,6 +16,8 @@ type AssetNode = {
   name: string;
   type: AssetNodeType;
   description: string;
+  lat?: number;
+  lng?: number;
   children: AssetNode[];
 };
 
@@ -46,20 +48,21 @@ const TYPE_ICON: Record<AssetNodeType, React.ReactNode> = {
 const INITIAL_TREE: AssetNode[] = [
   {
     id: "planta-norte", name: "Planta Norte", type: "planta", description: "Planta de producción norte",
+    lat: 43.2627, lng: -2.9253,
     children: [
       {
-        id: "area-prod", name: "Área Producción", type: "area", description: "",
+        id: "area-prod", name: "Área Producción", type: "area", description: "", lat: 43.2628, lng: -2.9251,
         children: [
-          { id: "sec-moldeado", name: "Sección Moldeado", type: "seccion", description: "", children: [
+          { id: "sec-moldeado", name: "Sección Moldeado", type: "seccion", description: "", lat: 43.2629, lng: -2.9249, children: [
             { id: "eq-m01", name: "Moldeadora-M01", type: "equipo", description: "", children: [] },
             { id: "eq-m02", name: "Moldeadora-M02", type: "equipo", description: "", children: [] },
             { id: "eq-m03", name: "Moldeadora-M03", type: "equipo", description: "", children: [] },
           ]},
-          { id: "sec-acabado", name: "Sección Acabado", type: "seccion", description: "", children: [
+          { id: "sec-acabado", name: "Sección Acabado", type: "seccion", description: "", lat: 43.2625, lng: -2.9255, children: [
             { id: "eq-a01", name: "Cabina-A01", type: "equipo", description: "", children: [] },
             { id: "eq-a02", name: "Cabina-A02", type: "equipo", description: "", children: [] },
           ]},
-          { id: "sec-ensam", name: "Sección Ensamblado", type: "seccion", description: "", children: [
+          { id: "sec-ensam", name: "Sección Ensamblado", type: "seccion", description: "", lat: 43.2631, lng: -2.9247, children: [
             { id: "eq-e01", name: "Mesa-E01", type: "equipo", description: "", children: [] },
             { id: "eq-e02", name: "Mesa-E02", type: "equipo", description: "", children: [] },
           ]},
@@ -68,11 +71,11 @@ const INITIAL_TREE: AssetNode[] = [
       {
         id: "area-util", name: "Área Utilities", type: "area", description: "",
         children: [
-          { id: "sec-hvac", name: "Sección HVAC", type: "seccion", description: "", children: [
+          { id: "sec-hvac", name: "Sección HVAC", type: "seccion", description: "", lat: 43.2623, lng: -2.9258, children: [
             { id: "eq-h01", name: "Unidad-H01", type: "equipo", description: "", children: [] },
             { id: "eq-h02", name: "Unidad-H02", type: "equipo", description: "", children: [] },
           ]},
-          { id: "sec-elec", name: "Sección Eléctrica", type: "seccion", description: "", children: [
+          { id: "sec-elec", name: "Sección Eléctrica", type: "seccion", description: "", lat: 43.2633, lng: -2.9245, children: [
             { id: "eq-qe01", name: "Cuadro-QE01", type: "equipo", description: "", children: [] },
             { id: "eq-qe02", name: "Cuadro-QE02", type: "equipo", description: "", children: [] },
           ]},
@@ -81,10 +84,10 @@ const INITIAL_TREE: AssetNode[] = [
       {
         id: "area-alm", name: "Área Almacén", type: "area", description: "",
         children: [
-          { id: "sec-entrada", name: "Sección Entrada", type: "seccion", description: "", children: [
+          { id: "sec-entrada", name: "Sección Entrada", type: "seccion", description: "", lat: 43.2621, lng: -2.9261, children: [
             { id: "eq-be01", name: "Báscula-BE01", type: "equipo", description: "", children: [] },
           ]},
-          { id: "sec-salida", name: "Sección Salida", type: "seccion", description: "", children: [
+          { id: "sec-salida", name: "Sección Salida", type: "seccion", description: "", lat: 43.2635, lng: -2.9243, children: [
             { id: "eq-bs01", name: "Báscula-BS01", type: "equipo", description: "", children: [] },
           ]},
         ],
@@ -93,15 +96,16 @@ const INITIAL_TREE: AssetNode[] = [
   },
   {
     id: "planta-sur", name: "Planta Sur", type: "planta", description: "Planta logística y mantenimiento",
+    lat: 37.3926, lng: -5.9911,
     children: [
       {
         id: "area-log", name: "Área Logística", type: "area", description: "",
         children: [
-          { id: "sec-recep", name: "Sección Recepción", type: "seccion", description: "", children: [
+          { id: "sec-recep", name: "Sección Recepción", type: "seccion", description: "", lat: 37.3928, lng: -5.9908, children: [
             { id: "eq-dr01", name: "Dock-R01", type: "equipo", description: "", children: [] },
             { id: "eq-dr02", name: "Dock-R02", type: "equipo", description: "", children: [] },
           ]},
-          { id: "sec-exped", name: "Sección Expedición", type: "seccion", description: "", children: [
+          { id: "sec-exped", name: "Sección Expedición", type: "seccion", description: "", lat: 37.3924, lng: -5.9914, children: [
             { id: "eq-de01", name: "Dock-E01", type: "equipo", description: "", children: [] },
             { id: "eq-de02", name: "Dock-E02", type: "equipo", description: "", children: [] },
           ]},
@@ -110,11 +114,11 @@ const INITIAL_TREE: AssetNode[] = [
       {
         id: "area-maint", name: "Área Mantenimiento", type: "area", description: "",
         children: [
-          { id: "sec-taller", name: "Sección Taller", type: "seccion", description: "", children: [
+          { id: "sec-taller", name: "Sección Taller", type: "seccion", description: "", lat: 37.3930, lng: -5.9905, children: [
             { id: "eq-bt01", name: "Banco-T01", type: "equipo", description: "", children: [] },
             { id: "eq-bt02", name: "Banco-T02", type: "equipo", description: "", children: [] },
           ]},
-          { id: "sec-repuest", name: "Sección Repuestos", type: "seccion", description: "", children: [
+          { id: "sec-repuest", name: "Sección Repuestos", type: "seccion", description: "", lat: 37.3922, lng: -5.9917, children: [
             { id: "eq-rp01", name: "Rack-RP01", type: "equipo", description: "", children: [] },
           ]},
         ],
@@ -135,7 +139,7 @@ function addChild(nodes: AssetNode[], parentId: string, child: AssetNode): Asset
   return mapTree(nodes, (n) => n.id === parentId ? { ...n, children: [...n.children, child] } : n);
 }
 
-function updateNode(nodes: AssetNode[], id: string, updates: Partial<Pick<AssetNode, "name" | "description">>): AssetNode[] {
+function updateNode(nodes: AssetNode[], id: string, updates: Partial<Pick<AssetNode, "name" | "description" | "lat" | "lng">>): AssetNode[] {
   return mapTree(nodes, (n) => n.id === id ? { ...n, ...updates } : n);
 }
 
@@ -152,42 +156,63 @@ function countByType(nodes: AssetNode[], type: AssetNodeType): number {
 }
 
 // ── Node Form Dialog ───────────────────────────────────────────────────────────
+const GEO_TYPES: AssetNodeType[] = ["planta", "area", "seccion"];
+
 function NodeFormDialog({
   open, onClose, onSubmit, mode, parentNode, editingNode,
 }: {
   open: boolean; onClose: () => void;
-  onSubmit: (name: string, description: string) => void;
+  onSubmit: (name: string, description: string, lat?: number, lng?: number) => void;
   mode: "add" | "edit";
-  parentNode: AssetNode | null; // for "add" — determines child type
+  parentNode: AssetNode | null;
   editingNode: AssetNode | null;
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [latStr, setLatStr] = useState("");
+  const [lngStr, setLngStr] = useState("");
   const [error, setError] = useState("");
-
-  React.useEffect(() => {
-    if (open) {
-      setError("");
-      if (mode === "edit" && editingNode) {
-        setName(editingNode.name);
-        setDescription(editingNode.description);
-      } else {
-        setName(""); setDescription("");
-      }
-    }
-  }, [open, mode, editingNode]);
+  const [geoError, setGeoError] = useState("");
 
   const childType: AssetNodeType | null = parentNode
     ? (TYPE_ORDER[TYPE_ORDER.indexOf(parentNode.type) + 1] ?? null)
     : "planta";
 
+  const nodeType = mode === "edit" ? (editingNode?.type ?? "planta") : (childType ?? "planta");
+  const showGeo = GEO_TYPES.includes(nodeType);
+
+  React.useEffect(() => {
+    if (open) {
+      setError(""); setGeoError("");
+      if (mode === "edit" && editingNode) {
+        setName(editingNode.name);
+        setDescription(editingNode.description);
+        setLatStr(editingNode.lat != null ? String(editingNode.lat) : "");
+        setLngStr(editingNode.lng != null ? String(editingNode.lng) : "");
+      } else {
+        setName(""); setDescription(""); setLatStr(""); setLngStr("");
+      }
+    }
+  }, [open, mode, editingNode]);
+
   const title = mode === "edit"
-    ? `Editar ${TYPE_LABEL[editingNode?.type ?? "planta"]}`
+    ? `Editar ${TYPE_LABEL[nodeType]}`
     : `Nuevo ${TYPE_LABEL[childType ?? "planta"]}`;
 
   const handleSubmit = () => {
     if (!name.trim()) { setError("El nombre es obligatorio"); return; }
-    onSubmit(name.trim(), description.trim());
+    let lat: number | undefined;
+    let lng: number | undefined;
+    if (showGeo && (latStr || lngStr)) {
+      const parsedLat = parseFloat(latStr);
+      const parsedLng = parseFloat(lngStr);
+      if (isNaN(parsedLat) || isNaN(parsedLng) || parsedLat < -90 || parsedLat > 90 || parsedLng < -180 || parsedLng > 180) {
+        setGeoError("Coordenadas inválidas. Latitud: −90…90, Longitud: −180…180");
+        return;
+      }
+      lat = parsedLat; lng = parsedLng;
+    }
+    onSubmit(name.trim(), description.trim(), lat, lng);
     onClose();
   };
 
@@ -214,6 +239,37 @@ function NodeFormDialog({
             <Label>Descripción</Label>
             <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descripción opcional" />
           </div>
+
+          {showGeo && (
+            <div className="space-y-1 rounded-lg border border-dashed border-slate-200 p-3">
+              <div className="mb-2 flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                <span className="text-xs font-medium text-slate-600">Geolocalización</span>
+                <span className="text-xs text-slate-400">(opcional)</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Latitud</Label>
+                  <Input
+                    value={latStr}
+                    onChange={(e) => { setLatStr(e.target.value); setGeoError(""); }}
+                    placeholder="Ej. 43.2627"
+                    className={`text-xs ${geoError ? "border-red-400" : ""}`}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Longitud</Label>
+                  <Input
+                    value={lngStr}
+                    onChange={(e) => { setLngStr(e.target.value); setGeoError(""); }}
+                    placeholder="Ej. -2.9253"
+                    className={`text-xs ${geoError ? "border-red-400" : ""}`}
+                  />
+                </div>
+              </div>
+              {geoError && <p className="text-xs text-red-500">{geoError}</p>}
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
@@ -264,6 +320,13 @@ function TreeNodeRow({
         {/* Description */}
         {node.description && (
           <span className="hidden lg:block text-xs text-slate-400 truncate max-w-[180px]">{node.description}</span>
+        )}
+
+        {/* Geo indicator */}
+        {(node.lat != null && node.lng != null) && (
+          <span className="hidden lg:flex items-center gap-1 text-xs text-sky-500 shrink-0" title={`${node.lat}, ${node.lng}`}>
+            <MapPin className="h-3 w-3" />
+          </span>
         )}
 
         {/* Child count */}
@@ -324,14 +387,14 @@ export default function JerarquiaPage() {
     if (window.confirm(msg)) setTree((t) => deleteNode(t, node.id));
   }, []);
 
-  const handleSubmit = useCallback((name: string, description: string) => {
+  const handleSubmit = useCallback((name: string, description: string, lat?: number, lng?: number) => {
     if (mode === "edit" && editingNode) {
-      setTree((t) => updateNode(t, editingNode.id, { name, description }));
+      setTree((t) => updateNode(t, editingNode.id, { name, description, lat, lng }));
     } else {
       const childType = parentNode
         ? TYPE_ORDER[TYPE_ORDER.indexOf(parentNode.type) + 1]
         : "planta";
-      const newNode: AssetNode = { id: nextId(), name, type: childType!, description, children: [] };
+      const newNode: AssetNode = { id: nextId(), name, type: childType!, description, lat, lng, children: [] };
       if (parentNode) setTree((t) => addChild(t, parentNode.id, newNode));
       else setTree((t) => [...t, newNode]);
     }

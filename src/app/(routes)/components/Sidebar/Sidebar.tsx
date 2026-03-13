@@ -17,6 +17,7 @@ import {
   Layers2,
   LayoutDashboard,
   Lock,
+  Map,
   Network,
   Radio,
   Radar,
@@ -181,6 +182,7 @@ function SidebarMenu() {
       <SectionLabel label="Principal" />
       <div className="flex flex-col gap-0.5">
         <TopLink href="/" label="Overview" icon={Gauge} />
+        <TopLink href="/maps" label="Maps" icon={Map} />
         <TopLink href="/dashboards" label="Dashboards" icon={LayoutDashboard} />
         <TopLink href="/analytics" label="Analytics" icon={ChartBar} />
         <TopLink href="/reporting" label="Reporting" icon={FileBarChart2} />
